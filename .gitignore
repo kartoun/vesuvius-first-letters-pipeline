@@ -1,0 +1,20 @@
+# Data, models and large artifacts live outside the repo (D:\DBBun\data\vesuvius)
+data/
+*.zarr/
+*.pth
+*.pt
+*.dbm
+*.npz
+*.vcobj
+__pycache__/
+*.log
+
+# Renders and ink predictions on eligible scrolls stay private until any
+# First Letters prize is officially announced (prize confidentiality rule).
+renders/
+ink_predictions/
+private/
+
+# Local working notes and submission records (may contain email); never publish
+drafts/
+Submitted*/
