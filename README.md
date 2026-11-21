@@ -16,6 +16,7 @@ No text recovery is claimed.
 | Seed-grown patches on the surface-prediction volume | 51–56% of tiles on-sheet |
 | Whole-scroll screen, 122 patches at z = 10750 | 27 min total, about 13 s per patch. 17 patches pass the surface filters. |
 | Zero-shot ink response | Median patch score 0.8, where known text = 1.0 and blank ≈ 0.2. The model responds broadly on this scroll, and a visual review of the top-ranked patches found no legible text. |
+| Per-pixel layer alignment (`refine_surface.py`) | On the 15 best PHerc0125 patches, on-sheet tiles rose from 41–81% to 64–91%, but sharpness stayed at 0.04–0.09. On the PHerc0211 winning segment, sharpness rose from 0.12 to 0.16 and the ink signal was unchanged (23.3 components per Mpx before and after). The remaining gap is a CT domain shift, not surface placement. |
 
 ## What this adds
 
@@ -62,7 +63,7 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Tracks | `prepare_band_tracks.sh`, `filter_tracks_dbm.py` |
 | Spiral fit | `fit_pherc0125.sh`, `measure_spiral_sense.py`, `render_windings.sh` |
 | Slices and seeds | `render_slice.py`, `remote_slice.py`, `pick_seeds.py`, `seed_grid.py` |
-| Surfaces | `grow_patches.sh`, `surface_quality.py` |
+| Surfaces | `grow_patches.sh`, `surface_quality.py`, `refine_surface.py`, `run_refine_experiment.sh`, `compare_refine.py` |
 | Ink | `run_ink.sh`, `ink_stats.py`, `ink_diagnostics.py` |
 | Screen | `run_screen.sh`, `screen_metrics.py`, `rank_screen.py`, `export_for_review.py` (writes local PNGs for the author's private review only) |
 
