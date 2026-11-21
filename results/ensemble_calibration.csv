@@ -1,0 +1,11 @@
+control,map,windows,score_median,ink_frac_median,comps200_per_Mpx_median
+PHerc0800 blank,hybrid_3d2d-seed42_step-075000,8,0.10,0.0058,4.2
+PHerc0800 blank,hybrid_3d2d-seed43_step-020000,8,0.16,0.0143,4.0
+PHerc0800 blank,ink9um-dense_dense9um-all7-step075000,8,0.21,0.0205,4.3
+PHerc0800 blank,mean,8,0.09,0.0086,2.0
+PHerc0800 blank,min,8,0.03,0.0016,1.5
+PHerc0211 known text,hybrid_3d2d-seed42_step-075000,20,0.69,0.0725,14.8
+PHerc0211 known text,hybrid_3d2d-seed43_step-020000,20,0.77,0.0769,17.8
+PHerc0211 known text,ink9um-dense_dense9um-all7-step075000,20,0.90,0.1011,17.4
+PHerc0211 known text,mean,20,0.60,0.0688,14.8
+PHerc0211 known text,min,20,0.38,0.0377,9.2

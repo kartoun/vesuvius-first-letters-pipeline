@@ -14,12 +14,15 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 out, screen = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
+# INK_SUFFIXES (env, comma-separated, default "") selects ensemble maps such as "_mean,_min".
+suffixes = os.environ.get("INK_SUFFIXES", "").split(",")
 for n in sys.argv[3:]:
-    p = np.asarray(Image.open(os.path.join(screen, "ink", n + ".tif"))).astype(np.float32)
-    if p.max() > 1.5:
-        p /= 255.0
-    q = np.clip((p - 0.25) / 0.5, 0, 1)
-    Image.fromarray((q * 255).astype(np.uint8)).save(os.path.join(out, n + "_ink.png"))
+    for suf in suffixes:
+        p = np.asarray(Image.open(os.path.join(screen, "ink", n + suf + ".tif"))).astype(np.float32)
+        if p.max() > 1.5:
+            p /= 255.0
+        q = np.clip((p - 0.25) / 0.5, 0, 1)
+        Image.fromarray((q * 255).astype(np.uint8)).save(os.path.join(out, n + suf + "_ink.png"))
     g = zarr.open(os.path.join(screen, "renders", n + ".zarr"), mode="r")
     v = np.asarray(g if hasattr(g, "shape") else g["0"]); v = np.moveaxis(v, int(np.argmin(v.shape)), 0)
     c = v.shape[0] // 2
