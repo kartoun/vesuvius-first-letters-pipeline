@@ -64,6 +64,7 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Spiral fit | `fit_pherc0125.sh`, `measure_spiral_sense.py`, `render_windings.sh` |
 | Slices and seeds | `render_slice.py`, `remote_slice.py`, `pick_seeds.py`, `seed_grid.py` |
 | Surfaces | `grow_patches.sh`, `surface_quality.py`, `refine_surface.py`, `run_refine_experiment.sh`, `compare_refine.py` |
+| Intensity normalisation | `normalize_intensity.py`, `run_norm_experiment.sh`, `run_followup.sh` |
 | Ink | `run_ink.sh`, `ink_stats.py`, `ink_diagnostics.py` |
 | Screen | `run_screen.sh`, `screen_metrics.py`, `rank_screen.py`, `export_for_review.py` (writes local PNGs for the author's private review only) |
 
