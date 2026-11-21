@@ -87,11 +87,33 @@ Practical consequences:
 - Review candidate areas several cm wide, at reduced scale, next to a known-text reference. `scripts/export_overview.py` writes that comparison.
 - Do not read patch-level ink counts or member agreement as evidence of text. In this work, the top-ranked patches by these metrics were all judged noise.
 
-### 5. Finding: large GrowPatch surfaces jump sheets
+### 5. Finding: on PHerc0846B, GrowPatch surfaces leave their sheet within 1–2 mm (calibrated test)
 
-At 120 generations, GrowPatch grows 24–25 cm² in 21–25 min (`scripts/run_large_patch.sh`). At this size the surfaces branch: one is Y-shaped. The ink map then shows a web of thin lines along sheet boundaries. The fraction of ink in blobs over 20,000 px is 0.36–0.43, against 0.04 on the known-text segment.
+*Correction.* An earlier version of this section, in commit `bcaaa44`, inferred sheet jumps from the shape of two large surfaces. That evidence was flawed. Those surfaces had grown far outside the downloaded data band (z 4251–9981, against a band of z 6784–7807), guided only by the normal grids, so their shape says nothing about sheet jumps. The test below replaces it.
 
-So on these scrolls, the bottleneck is a validated single-sheet surface several cm across. Ensembling, normalisation and alignment cannot substitute for it.
+**Growing inside the data band.** The GrowPatch parameters `z_min`/`z_max` bound growth. Without resume, though, growth stalls after about 20 generations: once the patch's used area contains invalid cells, only interior candidates are offered. Growing a small bounded patch and then continuing it with `--resume <dir> --resume-opt skip` works around this. The resulting PHerc0846B surface covers 12 cm² inside z 6776–7833, in 225 s (`scripts/run_large_patch.sh` takes the bounds).
+
+**Seeded divergence test** (`scripts/run_sheet_check.sh`, `scripts/sheet_consistency.py`, `scripts/seed_divergence.py`):
+
+1. Seed short GrowPatch surfaces (20 generations) on a lattice of points of the target surface.
+2. Keep only those that pass within 3 vx of their own seed. GrowPatch does not pass through its seed: its initial optimisation can move the surface up to about 20 vx along the normal, which is enough to land on a neighbouring sheet.
+3. Measure each surface's distance to the target as a function of distance from its seed.
+
+A synthetic control (the target shifted along its normal by 0, 3 and 13.6 vx) is measured exactly. The calibration target is the PHerc0211 winning segment, a manually corrected surface that is a validated single sheet.
+
+| Distance from seed | PHerc0211 known-good segment: share of surfaces within 5 vx | PHerc0846B 12 cm² surface: share within 5 vx |
+|---|---|---|
+| 0–0.5 mm | 0.98 | 0.73 |
+| 0.5–1 mm | 0.93 | 0.41 |
+| 1–2 mm | 0.90 | 0.25 |
+| 2–3 mm | 0.90 | 0.14 |
+| 3–4 mm | 0.93 | 0.05 |
+| Median distance at 3–4 mm | 2.6 vx | 12.5 vx (about one sheet spacing) |
+| Surface points within 2 vx of the m7 prediction (`surface_on_prediction.py`) | 0.84 | 0.49–0.61 |
+
+On the known-good PHerc0211 sheet, independent automatic surfaces stay on the sheet for at least 4 mm. On PHerc0846B, surfaces that start together end up about one sheet apart within 1–2 mm. The test cannot say which of them is right. It does say that GrowPatch on the m7 prediction does not hold one sheet on this scroll, which fits the cloud-like ink maps.
+
+On this scroll, a validated single-sheet surface several cm across is therefore the bottleneck, and ensembling, normalisation and alignment cannot substitute for it. The divergence test is cheap (about 3 min for 150 short surfaces with 8 parallel jobs) and can screen any surface before ink inference.
 
 ### 6. Workstation notes
 
@@ -149,6 +171,7 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Scroll ranking | `ct_fit_stats.py` |
 | Ensemble | `run_ensemble.sh`, `ensemble_combine.py`, `run_screen_ensemble.sh`, `download_scroll_band.ps1` |
 | Large surfaces and review | `run_large_patch.sh`, `export_overview.py`, `reference_ink_figure.py` |
+| Surface validation | `run_sheet_check.sh`, `sheet_consistency.py`, `seed_divergence.py`, `surface_on_prediction.py` |
 | Negative results | `stroke_metrics.py`, `spectrum_cal.py` |
 | Ink | `run_ink.sh`, `ink_stats.py`, `ink_diagnostics.py` |
 | Screen | `run_screen.sh`, `screen_metrics.py`, `rank_screen.py`, `export_for_review.py` (writes local PNGs for the author's private review only) |
