@@ -18,7 +18,7 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 out, name, rz, ink, ref = sys.argv[1:6]
 os.makedirs(out, exist_ok=True)
-PPCM = 10000 / 9.362
+PPCM = 10000 / float(os.environ.get("VOXEL_UM", "9.362"))   # candidate's pixels per cm
 
 
 def q_of(p):
@@ -42,15 +42,16 @@ lo, hi = np.percentile(ct[m], [1, 99]) if m.any() else (0, 255)
 ct = np.clip((ct - lo) / (hi - lo + 1e-6), 0, 1) * m
 Image.fromarray((q * 255).astype(np.uint8)).save(os.path.join(out, f"{name}_ink_full.png"))
 
-panels = [(small(q), f"{name}: ensemble mean ink (1/3 scale)"),
-          (small(ct), f"{name}: CT surface (1/3 scale)"),
-          (small(r), "REFERENCE PHerc0211 known text: ensemble mean ink (1/3 scale)")]
-wmax = max(p.shape[1] for p, _ in panels)
-fig, axs = plt.subplots(3, 1, figsize=(16, 16 * sum(p.shape[0] for p, _ in panels) / wmax + 2))
-for a, (img, t) in zip(axs, panels):
+PPCM_REF = 10000 / 9.362                                     # PHerc0211 reference is 9.362 um
+panels = [(small(q), f"{name}: ensemble mean ink (1/3 scale)", PPCM),
+          (small(ct), f"{name}: CT surface (1/3 scale)", PPCM),
+          (small(r), "REFERENCE PHerc0211 known text: ensemble mean ink (1/3 scale)", PPCM_REF)]
+wmax = max(p.shape[1] for p, _, _ in panels)
+fig, axs = plt.subplots(3, 1, figsize=(16, 16 * sum(p.shape[0] for p, _, _ in panels) / wmax + 2))
+for a, (img, t, pc) in zip(axs, panels):
     a.imshow(img, cmap="gray", vmin=0, vmax=1); a.set_title(t, fontsize=11)
     a.set_xlim(0, wmax); a.axis("off")
-    a.plot([20, 20 + PPCM / 3], [img.shape[0] - 15] * 2, color="yellow", lw=3)
+    a.plot([20, 20 + pc / 3], [img.shape[0] - 15] * 2, color="yellow", lw=3)
     a.text(20, img.shape[0] - 25, "1 cm", color="yellow", fontsize=9)
 fig.tight_layout(); fig.savefig(os.path.join(out, f"{name}_compare.png"), dpi=110)
 print("wrote", name, "canvas", q.shape, "CT-covered fraction %.2f" % m.mean())

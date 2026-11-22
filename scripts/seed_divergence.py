@@ -34,7 +34,13 @@ for k, rd in enumerate(refs):
             prof[(lo, hi)].append(np.median(d[m]))
 print(f"references used {used}, rejected for leaving their seed {rej} ({rej / max(used + rej, 1):.0%})")
 print("distance from seed (vx) | refs | median of per-ref median distance to target | share of refs within 5 vx")
+summary = [str(used), str(rej)]
 for (lo, hi), a in prof.items():
     a = np.array(a)
     if len(a):
         print(f"{lo:4d}-{hi:<4d}               | {len(a):4d} | {np.median(a):6.1f} vx | {np.mean(a < 5):.2f}")
+        summary.append(f"{np.mean(a < 5):.3f}")
+    else:
+        summary.append("nan")
+# Machine-readable line: used, rejected, share within 5 vx for each distance bin.
+print("SUMMARY," + ",".join(summary))

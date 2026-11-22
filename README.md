@@ -115,11 +115,70 @@ On the known-good PHerc0211 sheet, independent automatic surfaces stay on the sh
 
 On this scroll, a validated single-sheet surface several cm across is therefore the bottleneck, and ensembling, normalisation and alignment cannot substitute for it. The divergence test is cheap (about 3 min for 150 short surfaces with 8 parallel jobs) and can screen any surface before ink inference.
 
-### 6. Workstation notes
+### 6. A sheet-stability map: where GrowPatch holds one sheet, scroll by scroll
+
+`scripts/region_stability.sh` runs the divergence test of section 5 on a coarse lattice of seeds in one z slice of the data band. Each seed grows a small bounded target surface, and short reference surfaces are seeded on it. The output is geometry only, with no images. A region counts as stable when at least 80% of the reference surfaces stay within 5 vx of the target at 1–2 mm from their seed, and at least 70% at 2–3 mm.
+
+| Scroll, slice | Regions | Stable | Share |
+|---|---|---|---|
+| PHerc0211 (known-good control), along the winning segment, z 7779–9098 | 15 | 15 | 100% |
+| PHerc0175A (8.64 µm), z 6400 | 57 | 41 | 72% |
+| PHerc0846B, z 7296 | 88 | 21 | 24% |
+| PHerc0257, z 9856 | 31 | 0 | 0% |
+
+This map costs a few minutes per region and needs only the surface prediction and normal grids, not the CT. It says where an automatic surface can be trusted before any CT is downloaded. On this measure PHerc0175A behaves close to the PHerc0211 control, and PHerc0257 is not workable with GrowPatch on the m7 prediction at this height.
+
+`scripts/grow_verified_surface.sh` then grows a large bounded surface from a seed in a stable region, and repeats the divergence test on the result before any ink inference.
+
+### 7. GrowPatch surface orientation is arbitrary; a check for which face to read
+
+The ink models read one face of the papyrus (`--direction forward` or `reverse`). The face that carries the text faces the scroll centre. GrowPatch does not fix the sign of the surface normal, so the right direction differs from surface to surface.
+
+- **Convention**, measured on the PHerc0211 known-text segment: `forward` reads the ink when the grid normal, cross(d/drow, d/dcol), points toward the scroll centre. The centre at a given z is the centroid of the filled papyrus mask of a coarse pyramid level, read from the public S3 volume.
+- **Check.** `scripts/orient_surface.py` prints the right direction and the share of grid points whose normal points toward the centre. `scripts/pick_side.py` makes the same call per grid cell, for surfaces that curl.
+- **How often it matters.** On PHerc0175A, 3 verified surfaces had 0%, 23% and 73% of their normals toward the centre. In the 10-region scan below, 5 of 10 surfaces had to be read in reverse. Running every surface with the default direction would read the wrong face about half the time.
+
+### 8. Automatic cell scoring with a gate before human review
+
+Reviewing many square centimetres by eye is slow, and a reviewer tends to find letter-like shapes in noise (section 4). `scripts/cell_scan.py` splits a surface into 400 px grid cells, about one letter height at 8.6 µm, and scores each cell against the known-text and blank controls processed the same way. The cell grid matches the labelled grid of `scripts/grid_views.py`: rows A.. on Y, columns 1.. on X.
+
+- **Metrics** (`scripts/box_test.py`):
+  - member agreement;
+  - persistence under a ±3 layer shift;
+  - correlation with CT intensity;
+  - ink fraction;
+  - contrast.
+- **Green** (text-like): agreement, depth persistence and contrast all at or above the known-text 25th percentile, CT correlation inside the known-text 5–95% range, and no blob-sized ink fraction.
+- **Red:** copying CT structure, blob, or agreement or depth persistence below the blank median.
+- **Calibration.** The same classifier marks 53% of known-text cells green and 12% of blank cells. A surface's green rate is therefore read against those two numbers, not cell by cell.
+
+Two more tools are run on candidates. `scripts/base_rate.py` measures how often a criterion passes by chance, which guards against picking one lucky cell out of hundreds. `scripts/reproduce_check.py` and `scripts/repro_cells.py` test whether a mark reproduces on independently grown surfaces of the same sheet.
+
+`scripts/scan_region.sh` chains all of this for one seed, with no manual steps:
+
+1. Grow a bounded large surface.
+2. Run the divergence test.
+3. Pick the face to read.
+4. Render, align, and run the ensemble at three layer windows.
+5. Score every cell and append one summary row.
+
+Review images are written to a private folder only when a region's green rate reaches 30% with at least 15 usable cells.
+
+**Result on PHerc0175A (z 5900–6900, 8.64 µm), all numbers only:**
+
+- **Scanned regions.** 10 regions from the stability map, 3.9–9.0 cm² each, about 50 cm² in total and 9–16 min per region. Green rates were 0–6%: 4 green cells out of 336 usable. None passed the gate.
+- **Earlier verified surfaces.** Three surfaces, read on the correct face, had green rates of 0%, 11% and 22%.
+- **Reproduction.** Green cells with an independent surface reproduced with median r = 0.62. Non-green control cells on the same surfaces reproduced with median r = 0.82. Reproduction rules out edge and rendering artefacts, but it does not single out ink: both surfaces sample the same voxels.
+- **Reviewer-flagged areas.** Six areas flagged by eye were each tested with `box_test.py`. All were explained without text: copying CT structure, sitting at the surface edge, read from the back face, a void, or within the base rate.
+
+So in this band, with these public 9 µm checkpoints used zero-shot, there is no sign of text on PHerc0175A. This covers about 8% of the scroll height (1000 of 12,736 slices) at one radius range. It is a negative result for that band, not for the scroll.
+
+### 9. Workstation notes
 
 - **Parallel workers.** Four parallel screen workers kept the GPU at 60–66 °C and 130 W of 300 W.
 - **WSL memory.** WSL defaults to half the host RAM. `C:\Users\<you>\.wslconfig` with `memory=112GB` raised it to 110 GB.
 - **WSL disk location.** `wsl --manage Ubuntu --move D:\WSL\Ubuntu` moved the 116 GB WSL disk off C: in under a minute.
+- **Default distro.** Docker Desktop can make its own `docker-desktop` distro the WSL default, after which plain `wsl bash` fails with "bash: not found". Use `wsl -d Ubuntu`.
 
 ## What this adds
 
@@ -156,6 +215,8 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Umbilicus | `.../PHerc0125/representations/umbilicus/` | 6 KB |
 | Surface tracks | https://dl.ash2txt.org/datasets/spiral_datasets/PHerc0125/20250821151825/tracks/ | ~11.5 GiB |
 | Ink model | https://huggingface.co/scrollprize/ink_9um (`hybrid_3d2d-seed43/step-020000.pth`, MIT) | 138 MB |
+| December: PHerc0175A CT, level 0, z 5888–6911 | `.../PHerc0175A/volumes/20250521115057-8.640um-1.2m-116keV-masked.zarr` | ~26 GB |
+| December: surface predictions and normal grids | `.../<scroll>/representations/predictions/surfaces/` (m7 surface model) | per band |
 
 ## Scripts by stage
 
@@ -171,7 +232,9 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Scroll ranking | `ct_fit_stats.py` |
 | Ensemble | `run_ensemble.sh`, `ensemble_combine.py`, `run_screen_ensemble.sh`, `download_scroll_band.ps1` |
 | Large surfaces and review | `run_large_patch.sh`, `export_overview.py`, `reference_ink_figure.py` |
-| Surface validation | `run_sheet_check.sh`, `sheet_consistency.py`, `seed_divergence.py`, `surface_on_prediction.py` |
+| Surface validation | `run_sheet_check.sh`, `sheet_consistency.py`, `seed_divergence.py`, `surface_on_prediction.py`, `region_stability.sh`, `grow_verified_surface.sh` |
+| Surface orientation | `orient_surface.py`, `pick_side.py` |
+| Cell scoring and region scan | `cell_scan.py`, `box_test.py`, `base_rate.py`, `block_metrics.py`, `reproduce_check.py`, `repro_cells.py`, `scan_region.sh`, `grid_views.py` (writes PNGs for private review only) |
 | Negative results | `stroke_metrics.py`, `spectrum_cal.py` |
 | Ink | `run_ink.sh`, `ink_stats.py`, `ink_diagnostics.py` |
 | Screen | `run_screen.sh`, `screen_metrics.py`, `rank_screen.py`, `export_for_review.py` (writes local PNGs for the author's private review only) |
