@@ -4,6 +4,8 @@ forward and reverse cell scans accordingly.
 Convention (measured on the PHerc0211 known-text segment): --direction forward reads the ink when
 the surface grid normal, cross(d/drow, d/dcol), points toward the scroll centre. The centre at a
 given z is the centroid of the filled papyrus mask of a coarse pyramid level (public S3 volume).
+That holds for the official surface volumes. vc_render_tifxyz renders stack layers the other way, so
+for our renders pass the cells read with --direction reverse as FWD_CELLS and forward as REV_CELLS.
 Writes NAME_cells_sided.csv (cell, side, toward, class, metrics) and prints the green cells.
 Usage: python pick_side.py SURFACE_DIR VOLUME_S3_PATH FWD_CELLS.csv REV_CELLS.csv OUT.csv [GRID_PX]
 """

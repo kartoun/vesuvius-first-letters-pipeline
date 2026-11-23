@@ -50,6 +50,7 @@ def load_set(s):
     if ct.shape != S:
         ct = ndi.zoom(ct, (S[0] / ct.shape[0], S[1] / ct.shape[1]), order=1)
     out["ct"] = ct; out["valid"] = ndi.binary_erosion(ct > 0, iterations=40)
+    out["roi"] = s.get("roi")   # optional [y0, y1, x0, x1]: reference windows only inside it (e.g. a text line)
     return out
 
 
@@ -68,8 +69,10 @@ def metrics(D, y, x, h, w):
 
 def windows(D, h, w):
     H, W = D["m0"].shape; res = []
-    for y in range(0, H - h + 1, h // 2):
-        for x in range(0, W - w + 1, w // 2):
+    y0, y1, x0, x1 = D.get("roi") or (0, H, 0, W)
+    y1, x1 = min(y1, H), min(x1, W)
+    for y in range(y0, y1 - h + 1, h // 2):
+        for x in range(x0, x1 - w + 1, w // 2):
             mt = metrics(D, y, x, h, w)
             if mt:
                 res.append(((y, x), mt))

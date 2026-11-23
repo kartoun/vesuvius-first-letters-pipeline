@@ -6,6 +6,17 @@ The target scroll is **PHerc0125**, volume 20250821151825 (9.362 µm, 113 keV, E
 
 No text recovery is claimed.
 
+> **Correction, 2026-11-22.** Two problems affected every ink map this repo made on automatically grown (GrowPatch) surfaces before commit `29da130`:
+>
+> - **Wrong face.** `vc_render_tifxyz` stacks layers in the opposite order to the official surface volumes, so the `--direction` that reads the inked face on an official volume reads the back face on our renders.
+> - **Rotation.** GrowPatch grids have an arbitrary in-plane rotation, while the ink models expect the scroll axis vertical.
+>
+> The negative ink results on automatic surfaces are therefore **withdrawn as unreliable**: the PHerc0125 screen ("no legible text"), the PHerc0846B screen and the PHerc0175A region scan (section 8). They are not evidence that those scrolls have no text.
+>
+> Results that do not depend on reading automatic surfaces still stand: the r = 1.000 inference validation on official segments, the CT ranking, the sheet-divergence test and the stability map.
+>
+> Both fixes and their validation on public known-text data are in [Late November 2026 additions](#late-november-2026-additions-two-inference-fixes-and-a-validated-line-spacing-test).
+
 ## Summary of results
 
 | Step | Result |
@@ -15,7 +26,7 @@ No text recovery is claimed.
 | Spiral sense (catalog value is null) | Overall sign points to CW (+0.075, 95% CI +0.047 to +0.100), but one z sub-band reverses, so it is unresolved |
 | Seed-grown patches on the surface-prediction volume | 51–56% of tiles on-sheet |
 | Whole-scroll screen, 122 patches at z = 10750 | 27 min total, about 13 s per patch. 17 patches pass the surface filters. |
-| Zero-shot ink response | Median patch score 0.8, where known text = 1.0 and blank ≈ 0.2. The model responds broadly on this scroll, and a visual review of the top-ranked patches found no legible text. |
+| Zero-shot ink response | *Withdrawn (see the correction above).* Median patch score 0.8, where known text = 1.0 and blank ≈ 0.2, and a visual review of the top-ranked patches found no legible text. These patches were read with the old direction convention, on rotated canvases. |
 | Per-pixel layer alignment (`refine_surface.py`) | On the 15 best PHerc0125 patches, on-sheet tiles rose from 41–81% to 64–91%, but sharpness stayed at 0.04–0.09. On the PHerc0211 winning segment, sharpness rose from 0.12 to 0.16 and the ink signal was unchanged (23.3 components per Mpx before and after). The remaining gap is a CT domain shift, not surface placement. |
 
 ## December 2026 additions
@@ -67,7 +78,7 @@ Compared with PHerc0125 under the same ensemble, PHerc0846B responds more strong
 | Minimum-map score | 0.23 | 0.07 |
 | Member agreement | 0.45 | 0.26 |
 
-A visual review found no legible text, either in the six top-ranked patches or in two large surfaces of 24–25 cm² grown from the top cluster.
+A visual review found no legible text, either in the six top-ranked patches or in two large surfaces of 24–25 cm² grown from the top cluster. *Withdrawn as evidence (see the correction at the top). These maps were read with the old direction convention, on rotated canvases.*
 
 ### 4. Finding: 1 cm windows and image-free metrics cannot reject text at 9 µm
 
@@ -135,6 +146,7 @@ This map costs a few minutes per region and needs only the surface prediction an
 The ink models read one face of the papyrus (`--direction forward` or `reverse`). The face that carries the text faces the scroll centre. GrowPatch does not fix the sign of the surface normal, so the right direction differs from surface to surface.
 
 - **Convention**, measured on the PHerc0211 known-text segment: `forward` reads the ink when the grid normal, cross(d/drow, d/dcol), points toward the scroll centre. The centre at a given z is the centroid of the filled papyrus mask of a coarse pyramid level, read from the public S3 volume.
+- *Correction (2026-11-22):* that convention holds for the official surface volumes. Surfaces rendered with `vc_render_tifxyz` have their layers in the opposite order, so on our renders the direction must be inverted. See section 10. `orient_surface.py` and `pick_side.py` still report the official-volume convention; `scan_region.sh` now inverts it.
 - **Check.** `scripts/orient_surface.py` prints the right direction and the share of grid points whose normal points toward the centre. `scripts/pick_side.py` makes the same call per grid cell, for surfaces that curl.
 - **How often it matters.** On PHerc0175A, 3 verified surfaces had 0%, 23% and 73% of their normals toward the centre. In the 10-region scan below, 5 of 10 surfaces had to be read in reverse. Running every surface with the default direction would read the wrong face about half the time.
 
@@ -164,14 +176,14 @@ Two more tools are run on candidates. `scripts/base_rate.py` measures how often 
 
 Review images are written to a private folder only when a region's green rate reaches 30% with at least 15 usable cells.
 
-**Result on PHerc0175A (z 5900–6900, 8.64 µm), all numbers only:**
+**Result on PHerc0175A (z 5900–6900, 8.64 µm), all numbers only.** *Withdrawn (2026-11-22). These surfaces were read with the inverted direction convention, on rotated canvases (sections 10–11), and the classifier was calibrated on official-volume controls only. The numbers are kept for the record, not as evidence:*
 
 - **Scanned regions.** 10 regions from the stability map, 3.9–9.0 cm² each, about 50 cm² in total and 9–16 min per region. Green rates were 0–6%: 4 green cells out of 336 usable. None passed the gate.
 - **Earlier verified surfaces.** Three surfaces, read on the correct face, had green rates of 0%, 11% and 22%.
 - **Reproduction.** Green cells with an independent surface reproduced with median r = 0.62. Non-green control cells on the same surfaces reproduced with median r = 0.82. Reproduction rules out edge and rendering artefacts, but it does not single out ink: both surfaces sample the same voxels.
 - **Reviewer-flagged areas.** Six areas flagged by eye were each tested with `box_test.py`. All were explained without text: copying CT structure, sitting at the surface edge, read from the back face, a void, or within the base rate.
 
-So in this band, with these public 9 µm checkpoints used zero-shot, there is no sign of text on PHerc0175A. This covers about 8% of the scroll height (1000 of 12,736 slices) at one radius range. It is a negative result for that band, not for the scroll.
+~~So in this band, with these public 9 µm checkpoints used zero-shot, there is no sign of text on PHerc0175A.~~ This conclusion is withdrawn; see above.
 
 ### 9. Workstation notes
 
@@ -179,6 +191,81 @@ So in this band, with these public 9 µm checkpoints used zero-shot, there is no
 - **WSL memory.** WSL defaults to half the host RAM. `C:\Users\<you>\.wslconfig` with `memory=112GB` raised it to 110 GB.
 - **WSL disk location.** `wsl --manage Ubuntu --move D:\WSL\Ubuntu` moved the 116 GB WSL disk off C: in under a minute.
 - **Default distro.** Docker Desktop can make its own `docker-desktop` distro the WSL default, after which plain `wsl bash` fails with "bash: not found". Use `wsl -d Ubuntu`.
+
+## Late November 2026 additions: two inference fixes and a validated line-spacing test
+
+Everything in this section uses public, non-eligible data only: the PHerc0211 and PHerc0343 First Letters segments, PHerc0800 and automatic surfaces grown on them. Score throughout is the Pearson r between an ink map and the official-segment ensemble ink at the same 3D points: within 3 vx of the official PHerc0211 mesh, after 6 px Gaussian smoothing (`scripts/surface_variant_tools.py score`, n = 3,363–4,883 points per surface; the official ensemble ink is `POS_mean.tif` from section 2).
+
+### 10. Fix 1: `vc_render_tifxyz` renders have the opposite layer order to the official surface volumes
+
+We rendered the official PHerc0211 known-text mesh ourselves with `vc_render_tifxyz` (28 layers) and matched its layers against the official surface volume by intensity. Our layer *k* is official layer 27 − *k*. As a result, ink inference reads the inked face with the opposite `--direction` from the one that works on the official volume:
+
+| Official PHerc0211 mesh, rendered with `vc_render_tifxyz` | r vs official ink |
+|---|---|
+| `--direction forward` | 0.11 |
+| `--direction reverse` | **0.77** |
+
+The same holds on PHerc0343. Anyone running `ink_9um` on their own `vc_render_tifxyz` renders (for example GrowPatch or spiral-fitter surfaces) should check this before trusting a negative result. `scripts/scan_region.sh` now inverts the official-volume convention reported by `orient_surface.py`.
+
+### 11. Fix 2: run inference on an upright canvas
+
+GrowPatch grids come out with an arbitrary in-plane rotation (17° to 168° on the seven public PHerc0211 and PHerc0343 surfaces used here), and some are mirrored. The ink models were trained on official renders, which have the scroll axis vertical and text lines horizontal.
+
+`scripts/upright_render.py` takes the angle from the surface itself: it rotates the z map in 1° steps and keeps the angle at which z increases straight down the rows, which also handles mirrored grids. It then rotates the rendered volume, runs inference, and rotates the ink map back to the original grid, so nothing downstream changes.
+
+Three automatic GrowPatch surfaces (s1–s3) grown on the PHerc0211 known-text area, same render, same 3-member ensemble:
+
+| Inference | s1 | s2 | s3 |
+|---|---|---|---|
+| Old convention (back face read) | 0.08 | 0.10 | 0.07 |
+| Correct face, GrowPatch canvas | 0.45 | 0.57 | 0.64 |
+| **Correct face, upright canvas** | **0.79** | **0.82** | **0.83** |
+| *Reference: official hand-refined mesh, our render, correct face* | | *0.77* | |
+
+With both fixes, automatic surfaces recover the known text as well as the official hand-refined mesh does through the same path.
+
+Before finding the rotation, we tested other explanations for the gap between the second row and the reference, and none closed it:
+
+- random normal offsets of up to sd 3 vx added to the official mesh, which `refine_surface.py` absorbs;
+- normal tilt, about 3° and the same on all surfaces;
+- on s3, `vc_objrefine` (r 0.63) and grid smoothing (0.58), against a baseline of 0.64;
+- re-gridding with `flatboi`, which gave small gains only.
+
+A hybrid surface, the official grid layout with the automatic geometry along its normals, recovered the letters (r 0.67 on s2 and s3). That pointed to the canvas rather than the geometry.
+
+![Same automatic surface, three ways](figures/direction_and_upright_fix.png)
+
+`scripts/upright_figure.py` built the figure: PHerc0211 surface s3, the same crop around the known-text segment, all shown upright. At this crop size the improvement is clearer in the scores than to the eye; see section 12.
+
+### 12. A line-spacing test that separates text from blank, validated on two scrolls
+
+Section 4 found that the eye and image-free metrics cannot reject text in about 1 cm windows. A blind test on upright, public 600 px tiles (28 tiles: known text from automatic surfaces and from the official segment, wrong face, blank) confirmed it: the reviewer's AUC was 0.55. Member agreement, ink fraction and 95th-percentile ink separate the right face from the wrong face on the known-text strip, but not anywhere else on the same surfaces, so they are not text detectors.
+
+One measure works: **the spacing of text lines**. In tall windows (11.2 × 3.75 mm), the row profile of an upright ink map is autocorrelated, and the peak lag is searched between 2.3 and 6.5 mm. A window counts as "lined" when that peak falls at 4.0–5.6 mm. The band was fixed on PHerc0211 and then tested unchanged on PHerc0343:
+
+| Windows | Share lined | n |
+|---|---|---|
+| PHerc0343 official segment, text rows (independent test) | **94%** | 17 |
+| PHerc0211 official segment | 79% | 34 |
+| PHerc0211 automatic surfaces, correct face, on the known text | 80% | 10 |
+| Same windows, wrong face | 40% | 10 |
+| Automatic surfaces away from the known text (both scrolls) | 18–36% | 28–53 per group |
+| PHerc0800 blank | 0% | 7 |
+
+The peak sits at 4.5–5.1 mm on text. On blank papyrus it sits at the search floor, meaning no repeating rows. Limits:
+
+- The evidence on automatic surfaces rests on 10 overlapping windows on one scroll.
+- The official-vs-blank comparison mixes two scrolls.
+- About a third of windows anywhere on a surface fall in the band by chance, so a region needs well above about 40%, and clearly more than on its own wrong face.
+- Windows must be about 11 mm tall, so a surface needs at least that much height. A surface grown inside a CT band only 9 mm tall cannot be tested. The First Letters area of 4 cm² (about 2 × 2 cm) needs a band at least 2 cm tall anyway.
+
+Scripts:
+
+- `scripts/known_text_masks.py` marks which pixels of an automatic surface lie on the official known-text segment.
+- `scripts/line_spacing_eval.py` runs the validation above.
+- `scripts/line_gate.py` applies the fixed rule to one surface: at least 8 windows, at least 60% lined, and at least 20 points more than on the wrong face. It also reports the best 2 × 2 cm block.
+
+`scripts/run_ensemble.sh` takes a `LAYERS="start end"` variable for these runs.
 
 ## What this adds
 
@@ -216,6 +303,7 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Surface tracks | https://dl.ash2txt.org/datasets/spiral_datasets/PHerc0125/20250821151825/tracks/ | ~11.5 GiB |
 | Ink model | https://huggingface.co/scrollprize/ink_9um (`hybrid_3d2d-seed43/step-020000.pth`, MIT) | 138 MB |
 | December: PHerc0175A CT, level 0, z 5888–6911 | `.../PHerc0175A/volumes/20250521115057-8.640um-1.2m-116keV-masked.zarr` | ~26 GB |
+| Late Nov: PHerc0343 First Letters segment and CT band (public control) | `.../PHerc0343/` (8.64 µm) | per band |
 | December: surface predictions and normal grids | `.../<scroll>/representations/predictions/surfaces/` (m7 surface model) | per band |
 
 ## Scripts by stage
@@ -234,6 +322,7 @@ All inputs are public Vesuvius Challenge open data (CC-BY-NC 4.0). They are down
 | Large surfaces and review | `run_large_patch.sh`, `export_overview.py`, `reference_ink_figure.py` |
 | Surface validation | `run_sheet_check.sh`, `sheet_consistency.py`, `seed_divergence.py`, `surface_on_prediction.py`, `region_stability.sh`, `grow_verified_surface.sh` |
 | Surface orientation | `orient_surface.py`, `pick_side.py` |
+| Upright inference and scoring (late Nov) | `upright_render.py`, `upright_figure.py`, `surface_variant_tools.py`, `known_text_masks.py`, `line_spacing_eval.py`, `line_gate.py`, `snap_to_prediction.py` (experimental, not used in results) |
 | Cell scoring and region scan | `cell_scan.py`, `box_test.py`, `base_rate.py`, `block_metrics.py`, `reproduce_check.py`, `repro_cells.py`, `scan_region.sh`, `grid_views.py` (writes PNGs for private review only) |
 | Negative results | `stroke_metrics.py`, `spectrum_cal.py` |
 | Ink | `run_ink.sh`, `ink_stats.py`, `ink_diagnostics.py` |

@@ -35,7 +35,11 @@ rm -rf "$O/check/refs"
 vc_render_tifxyz --volume "$VOL" --group-idx 0 --scale 1 --segmentation "$O/large" --num-slices 48 --slice-step 1 \
   --cache-gb 24 --zarr-output "$O/r48.zarr" > "$O/logs/render.log" 2>&1 || { echo "$NM,render_failed" >> "$ROOT/summary.csv"; exit 1; }
 $PY $S/refine_surface.py "$O/r48.zarr" "$O/render.zarr" --out-layers 28 --search 8 > "$O/logs/refine.log" 2>&1; rm -rf "$O/r48.zarr"
-DIR=$([ "$SIDE" = "rev" ] && echo reverse || echo forward)
+# orient_surface's fwd/rev is the official surface-volume convention (forward reads the ink when the grid
+# normal points toward the centre). vc_render_tifxyz stacks layers in the opposite order (measured on the
+# PHerc0211 and PHerc0343 known-text segments: our layer k = official layer 27-k where normals agree),
+# so the inference direction on our renders is the inverse.
+DIR=$([ "$SIDE" = "rev" ] && echo forward || echo reverse)
 for w in "d 6 23" "m3 3 20" "p3 9 26"; do
   read -r tag a b <<< "$w"; T=()
   for CK in $MEM; do

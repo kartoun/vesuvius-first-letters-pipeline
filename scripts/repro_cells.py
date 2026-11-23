@@ -1,11 +1,14 @@
-"""Reproduction test for every green cell of a surface (numbers only; outputs PRIVATE).
+"""Reproduction test for chosen cells of a surface (numbers only; outputs PRIVATE).
 
-For each green cell (from pick_side.py's sided CSV): seed short bounded GrowPatch surfaces near the
-cell centre, keep those on the same sheet (median gap < 3 vx near the cell and passing within 3 vx
-of their seed), render, align, run the ensemble reading the SAME papyrus face as the reviewed
-surface (direction flipped when the new surface's normal is opposite), and correlate the two ink
-maps at matching 3D points within 150 vx of the cell centre (reproduce_check.py).
-Usage: python repro_cells.py SAMPLE VOLID VOLNAME ZMIN ZMAX VOXEL A_SURFACE A_INK_FWD A_INK_REV SIDED.csv OUT_DIR [MAX_OK]
+For each cell: seed short bounded GrowPatch surfaces near the cell centre, keep those on the same
+sheet (median gap < 3 vx near the cell and passing within 3 vx of their seed), render, align, run the
+ensemble reading the SAME papyrus face as the reviewed surface A, and correlate the two ink maps at
+matching 3D points within 150 vx of the cell centre (reproduce_check.py).
+Same face: B uses the --direction that produced A's ink at that cell, inverted when B's grid normal is
+opposite to A's (both are vc_render_tifxyz renders, so the layer-order convention cancels).
+CELLS.csv columns: cell, dir (A's actual --direction there: forward|reverse), role (candidate|baseline),
+max_ok (independent surfaces wanted). LAYERS env var is passed to run_ensemble.sh (A's layer window).
+Usage: python repro_cells.py SAMPLE VOLID VOLNAME ZMIN ZMAX VOXEL A_SURFACE A_INK.tif CELLS.csv OUT_DIR
 """
 import csv, os, subprocess, sys
 import numpy as np
@@ -13,8 +16,7 @@ from scipy.spatial import cKDTree
 here = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, here)
 from sheet_consistency import load, densify
 
-(sample, volid, volname, zmin, zmax, voxel, A, A_fwd, A_rev, sided, out) = sys.argv[1:12]
-max_ok = int(sys.argv[12]) if len(sys.argv) > 12 else 2
+(sample, volid, volname, zmin, zmax, voxel, A, A_ink, cells_csv, out) = sys.argv[1:11]
 R = f"/mnt/d/DBBun/data/vesuvius/{sample}"
 pred = f"{R}/representations/predictions/surfaces/{volid}-surface-20260413222639-surface-m7-L0-th0.2"
 vol = f"{R}/volumes/{volname}"
@@ -37,10 +39,10 @@ def run(cmd, log):
         return subprocess.run(cmd, shell=True, stdout=fh, stderr=subprocess.STDOUT).returncode
 
 
-cells = [r for r in csv.DictReader(open(sided)) if r["class"] == "green"]
+cells = list(csv.DictReader(open(cells_csv)))
 res = []
 for r in cells:
-    cell, side = r["cell"], r["side"]
+    cell, dirA, role, max_ok = r["cell"], r["dir"], r["role"], int(r["max_ok"])
     j = (ord(cell[0]) - 65) * 20 + 10; i = (int(cell[1:]) - 1) * 20 + 10
     if not vA[j, i]:
         ok = np.argwhere(vA[j - 10:j + 10, i - 10:i + 10])
@@ -68,25 +70,23 @@ for r in cells:
         if len(near) < 50 or np.median(treeA.query(near)[0]) > 3 or np.min(np.linalg.norm(PB - s, axis=1)) > 3:
             continue
         flip = np.dot(nA, normal(XB, vB, c)) < 0
-        dirB = {"fwd": "forward", "rev": "reverse"}[side]
-        if flip:
-            dirB = "reverse" if dirB == "forward" else "forward"
+        dirB = ("reverse" if dirA == "forward" else "forward") if flip else dirA
         rz = d + ".render.zarr"
         run(f"vc_render_tifxyz --volume {vol} --group-idx 0 --scale 1 --segmentation {d} --num-slices 48 "
             f"--slice-step 1 --cache-gb 32 --zarr-output {d}.r48.zarr", d + ".render.log")
         run(f"{PY} {here}/refine_surface.py {d}.r48.zarr {rz} --out-layers 28 --search 8", d + ".refine.log")
         run(f"rm -rf {d}.r48.zarr", "/dev/null")
         run(f"bash {here}/run_ensemble.sh {rz} {out}/ink {name} {dirB}", d + ".ens.log")
-        chk = subprocess.run(f"{PY} {here}/reproduce_check.py {A} {A_fwd if side == 'fwd' else A_rev} {d} "
+        chk = subprocess.run(f"{PY} {here}/reproduce_check.py {A} {A_ink} {d} "
                              f"{out}/ink/{name}_mean.tif {c[0]} {c[1]} {c[2]} 150 4",
                              shell=True, capture_output=True, text=True).stdout
         line = [l for l in chk.splitlines() if l.startswith("ink r(A,B)")]
         if line:
             rs.append(float(line[0].split("=")[1].split(";")[0]))
-    res.append((cell, side, rs))
-    print(f"{cell} ({side}): independent surfaces {len(rs)}, r = {', '.join(f'{x:.2f}' for x in rs) or 'n/a'}", flush=True)
+    res.append((cell, role, dirA, rs))
+    print(f"{cell} ({role}, A {dirA}): independent surfaces {len(rs)}, r = {', '.join(f'{x:.2f}' for x in rs) or 'n/a'}", flush=True)
 with open(os.path.join(out, "repro_cells.csv"), "w") as fh:
-    fh.write("cell,side,n,r_values,r_mean\n")
-    for cell, side, rs in res:
-        fh.write(f"{cell},{side},{len(rs)},{' '.join(f'{x:.3f}' for x in rs)},{np.mean(rs) if rs else float('nan'):.3f}\n")
+    fh.write("cell,role,dir,n,r_values,r_mean\n")
+    for cell, role, dirA, rs in res:
+        fh.write(f"{cell},{role},{dirA},{len(rs)},{' '.join(f'{x:.3f}' for x in rs)},{np.mean(rs) if rs else float('nan'):.3f}\n")
 print("REPRO CELLS DONE")

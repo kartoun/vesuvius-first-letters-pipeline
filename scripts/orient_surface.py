@@ -2,6 +2,8 @@
 Prints "fwd" or "rev" for vesuvius ink inference --direction, plus the share of grid points whose
 normal points toward the centre. Convention measured on the PHerc0211 known-text segment: forward
 reads the ink when the grid normal cross(d/drow, d/dcol) points toward the scroll centre.
+This is the official surface-volume convention; on vc_render_tifxyz renders (opposite layer order)
+"fwd" means --direction reverse and "rev" means forward (see scan_region.sh).
 Usage: python orient_surface.py SURFACE_DIR VOLUME_S3_PATH
 """
 import os, sys
